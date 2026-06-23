@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ограничения отпуска топлива по регионам РФ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .content {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .map-container {
+            flex: 1;
+            min-width: 600px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 700px;
+            border-radius: 8px;
+        }
+
+        .info-panel {
+            flex: 0 0 320px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f5f5f5;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+            max-height: 750px;
+            overflow-y: auto;
+        }
+
+        .info-panel h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .info-panel p {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .info-empty {
+            color: #999;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .restriction-list {
+            margin-top: 15px;
+            list-style: none;
+        }
+
+        .restriction-list li {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-left: 3px solid #667eea;
+            padding-left: 12px;
+            border-radius: 3px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status.critical {
+            background-color: #fee;
+            color: #c33;
+        }
+
+        .status.warning {
+            background-color: #fef3cd;
+            color: #856404;
+        }
+
+        .status.normal {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .legend {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+
+        .legend h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border: 1px solid #999;
+            border-radius: 3px;
+        }
+
+        .legend-color.no-restrictions {
+            background-color: #d4edda;
+        }
+
+        .legend-color.moderate {
+            background-color: #fef3cd;
+        }
+
+        .legend-color.severe {
+            background-color: #fee;
+        }
+
+        @media (max-width: 1100px) {
+            .content {
+                flex-direction: column;
+            }
+
+            .info-panel {
+                position: static;
+                max-height: none;
+            }
+
+            .map-container {
+                min-width: auto;
+            }
+
+            #map {
+                height: 500px;
+            }
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+
+        .popup-content {
+            font-size: 12px;
+            color: #333;
+        }
+
+        .popup-content strong {
+            display: block;
+            margin-top: 8px;
+            color: #667eea;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .edit-mode {
+            background: #f0f8ff !important;
+            border: 2px solid #667eea !important;
+        }
+
+        .edit-button, .save-button, .cancel-button {
+            background-color: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 5px 5px 5px 0;
+            transition: background-color 0.3s;
+        }
+
+        .edit-button:hover {
+            background-color: #5568d3;
+        }
+
+        .cancel-button {
+            background-color: #999;
+        }
+
+        .cancel-button:hover {
+            background-color: #777;
+        }
+
+        .save-button {
+            background-color: #28a745;
+        }
+
+        .save-button:hover {
+            background-color: #218838;
+        }
+
+        .edit-form {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 6px;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 4px rgba(102, 126, 234, 0.3);
+        }
+
+        .restriction-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .restriction-item input {
+            flex: 1;
+        }
+
+        .restriction-item button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .restriction-item button:hover {
+            background-color: #c82333;
+        }
+
+        .add-restriction-btn {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .add-restriction-btn:hover {
+            background-color: #138496;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛢️ Ограничения отпуска топлива по регионам РФ</h1>
+        <p class="subtitle">Актуальная информация о статусе доступности топлива в различных регионах</p>
+
+        <div class="content">
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+
+            <div class="info-panel">
+                <h2>📍 Информация по региону</h2>
+                <div id="regionInfo" class="info-empty">
+                    <p>Нажмите на регион на карте для просмотра информации об ограничениях</p>
+                </div>
+
+                <div class="legend">
+                    <h3>Статус ограничений:</h3>
+                    <div class="legend-item">
+                        <div class="legend-color no-restrictions"></div>
+                        <span>Ограничений нет</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color moderate"></div>
+                        <span>Умеренные ограничения</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color severe"></div>
+                        <span>Серьезные ограничения</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Загружаем сохранённые данные из localStorage при инициализации
+        function loadSavedData() {
+            const saved = localStorage.getItem('fuelRestrictionsData');
+            if (saved) {
+                try {
+                    const savedData = JSON.parse(saved);
+                    Object.assign(regionsData, savedData);
+                    console.log('✓ Загружены сохранённые данные из localStorage');
+                } catch (e) {
+                    console.error('Ошибка при загрузке сохранённых данных:', e);
+                }
+            }
+        }
+
+        // Сохраняем данные в localStorage
+        function saveDataToStorage() {
+            localStorage.setItem('fuelRestrictionsData', JSON.stringify(regionsData));
+            console.log('✓ Данные сохранены в localStorage');
+        }
+
+        // Получаем текущую дату в формате YYYY-MM-DD
+        function getCurrentDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        let currentEditingRegion = null;
+
+        function showRegionInfo(regionName, data) {
+            currentEditingRegion = regionName;
+            
+            const statusBadge = `
+                <div class="status ${data.status}">
+                    ${data.status === 'normal' ? '✓ Ограничений нет' : 
+                      data.status === 'warning' ? '⚠ Умеренные ограничения' : 
+                      '✕ Серьезные ограничения'}
+                </div>
+            `;
+
+            const restrictions = data.restrictions
+                .map(r => `<li>${r}</li>`)
+                .join('');
+
+            infoPanel.innerHTML = `
+                <h2>📍 ${regionName}</h2>
+                ${statusBadge}
+                <button class="edit-button" onclick="enterEditMode('${regionName.replace(/'/g, "\\'")}')">✏️ Редактировать</button>
+                <h3 style="margin-top: 15px; color: #333; font-size: 14px;">Текущие ограничения:</h3>
+                <ul class="restriction-list">
+                    ${restrictions}
+                </ul>
+                <p style="margin-top: 15px; font-size: 12px; color: #999;">
+                    <strong>Контакт:</strong> ${data.phone}<br>
+                    <strong>Обновлено:</strong> ${data.lastUpdate}
+                </p>
+            `;
+        }
+
+        function enterEditMode(regionName) {
+            const data = regionsData[regionName];
+            if (!data) {
+                alert('Ошибка: данные региона не найдены');
+                return;
+            }
+
+            const restrictionsHtml = data.restrictions
+                .map((r, idx) => `
+                    <div class="restriction-item">
+                        <input type="text" value="${r.replace(/"/g, '&quot;')}" id="restriction-${idx}">
+                        <button type="button" onclick="removeRestriction(${idx})">Удалить</button>
+                    </div>
+                `)
+                .join('');
+
+            const editForm = `
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label>Статус:</label>
+                        <select id="edit-status">
+                            <option value="normal" ${data.status === 'normal' ? 'selected' : ''}>Ограничений нет</option>
+                            <option value="warning" ${data.status === 'warning' ? 'selected' : ''}>Умеренные ограничения</option>
+                            <option value="critical" ${data.status === 'critical' ? 'selected' : ''}>Серьезные ограничения</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Контакт (телефон):</label>
+                        <input type="text" id="edit-phone" value="${data.phone.replace(/"/g, '&quot;')}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ограничения:</label>
+                        <div id="restrictions-container">
+                            ${restrictionsHtml}
+                        </div>
+                        <button type="button" class="add-restriction-btn" onclick="addRestrictionField()">+ Добавить ограничение</button>
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <button class="save-button" onclick="saveChanges('${regionName.replace(/'/g, "\\'")}')">💾 Сохранить</button>
+                        <button class="cancel-button" onclick="cancelEdit('${regionName.replace(/'/g, "\\'")}')">✕ Отменить</button>
+                    </div>
+                </div>
+            `;
+
+            infoPanel.innerHTML = `
+                <h2>📍 ${regionName}</h2>
+                <div style="color: #667eea; font-weight: bold; margin-bottom: 10px;">Режим редактирования</div>
+                ${editForm}
+            `;
+        }
+
+        function addRestrictionField() {
+            const container = document.getElementById('restrictions-container');
+            const idx = container.children.length;
+            const newField = document.createElement('div');
+            newField.className = 'restriction-item';
+            newField.innerHTML = `
+                <input type="text" value="" id="restriction-${idx}">
+                <button type="button" onclick="removeRestriction(${idx})">Удалить</button>
+            `;
+            container.appendChild(newField);
+        }
+
+        function removeRestriction(idx) {
+            const field = document.getElementById(`restriction-${idx}`);
+            if (field) {
+                field.parentElement.remove();
+            }
+        }
+
+        function saveChanges(regionName) {
+            const status = document.getElementById('edit-status').value;
+            const phone = document.getElementById('edit-phone').value;
+            
+            const restrictions = [];
+            document.querySelectorAll('.restriction-item input').forEach(input => {
+                if (input.value.trim()) {
+                    restrictions.push(input.value.trim());
+                }
+            });
+
+            if (restrictions.length === 0) {
+                alert('Добавьте хотя бы одно ограничение');
+                return;
+            }
+
+            if (!phone.trim()) {
+                alert('Укажите контактный телефон');
+                return;
+            }
+
+            // Обновляем данные
+            regionsData[regionName] = {
+                status: status,
+                restrictions: restrictions,
+                phone: phone,
+                lastUpdate: getCurrentDate()
+            };
+
+            // Сохраняем в localStorage
+            saveDataToStorage();
+
+            // Показываем обновленную информацию
+            showRegionInfo(regionName, regionsData[regionName]);
+            
+            // Обновляем цвет региона на карте
+            updateMapColors();
+            
+            alert('✓ Данные региона сохранены!');
+        }
+
+        function cancelEdit(regionName) {
+            showRegionInfo(regionName, regionsData[regionName]);
+        }
+
+        function updateMapColors() {
+            // Перезагружаем карту с новыми цветами
+            window.location.reload();
+        }
+
+        // Инициализируем страницу
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedData();
+        });
+
+        // Инициализируем карту с центром на России
+        const map = L.map('map').setView([61.52, 104.3], 3);
+
+        // Добавляем слой OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Данные об ограничениях по регионам (обновлено 23.06.2026)
+        const regionsData = {
+            'Московская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (495) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Санкт-Петербург': {
+                status: 'critical',
+                restrictions: [
+                    'До 100 литров на один автомобиль',
+                    'Заправляться можно только в бак',
+                    '«Татнефть» — до 20 литров бензина на одну машину и до 40 литров дизеля',
+                    '«Роснефть» — 100 литров на одну транзакцию, продажа в канистры запрещена',
+                    '«ЛУКОЙЛ» — максимум 100 литров на машину за одну заправку, канистры под запретом',
+                    '«Сургутнефтегаз» / «Киришиавтосервис» — не более 50 литров на один чек'
+                ],
+                phone: '+7 (812) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Ленинградская область': {
+                status: 'critical',
+                restrictions: [
+                    'До 100 литров на один автомобиль',
+                    'Заправляться можно только в бак',
+                    '«Татнефть» — до 20 литров бензина на одну машину и до 40 литров дизеля',
+                    '«Роснефть» — 100 литров на одну транзакцию, продажа в канистры запрещена',
+                    '«ЛУКОЙЛ» — максимум 100 литров на машину за одну заправку, канистры под запретом',
+                    '«Сургутнефтегаз» / «Киришиавтосервис» — не более 50 литров на один чек'
+                ],
+                phone: '+7 (812) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Ростовская область': {
+                status: 'critical',
+                restrictions: [
+                    'Лимит: 25 л на одного человека',
+                    'Серьезные проблемы с поставками топлива',
+                    'Многие АЗС работают по сокращенному графику',
+                    'Заправляться рекомендуется с утра (6:00-10:00)'
+                ],
+                phone: '+7 (863) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Краснодарский край': {
+                status: 'critical',
+                restrictions: [
+                    'Без численного лимита, но запрет налива в канистры',
+                    'Только в личный бак транспортного средства',
+                    'Критическая ситуация с поставками',
+                    'Несколько сетей АЗС работают с ограничениями'
+                ],
+                phone: '+7 (861) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Татарстан': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (843) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Свердловская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 20-50 л в зависимости от сети',
+                    'Только дизель доступен в Асбесте',
+                    'Запрет налива в тару во всех сетях',
+                    'Лукойл: только дизель в некоторых городах'
+                ],
+                phone: '+7 (343) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Тюменская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 45 л на одного человека',
+                    'Незначительные ограничения на поставки',
+                    'Рекомендуется планировать поездки',
+                    'На большинстве АЗС топливо есть'
+                ],
+                phone: '+7 (345) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Новосибирская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Заправляться рекомендуется в дневные часы',
+                    'На некоторых АЗС возможны перебои',
+                    'Ситуация стабилизируется'
+                ],
+                phone: '+7 (383) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Красноярский край': {
+                status: 'normal',
+                restrictions: [
+                    'Официальных ограничений на продажу топлива в Красноярском крае нет'
+                ],
+                phone: '+7 (391) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Иркутская область': {
+                status: 'critical',
+                restrictions: [
+                    'Лимит: 20 л на одного человека',
+                    'Критическая ситуация с поставками',
+                    'Продажа только по предварительным заказам',
+                    'Свободная продажа практически отсутствует'
+                ],
+                phone: '+7 (395) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Саха (Якутия)': {
+                status: 'warning',
+                restrictions: [
+                    '«Туймаада-нефть» за одно посещение заправки можно залить только один полный бак автомобиля, заправка в канистры запрещена',
+                    'Для фур отпускают до 1000 литров топлива'
+                ],
+                phone: '+7 (411) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Хабаровский край': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (421) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Приморский край': {
+                status: 'warning',
+                restrictions: [
+                    'ННК: налив только в бак, запрет в канистры с 22 июня',
+                    'Частные АЗС: 10 л в канистры, на 10-20 руб. дороже',
+                    '«Октант» и «Ussuri»: ограничения с 22 июня',
+                    'Запрет налива в тару на основных сетях'
+                ],
+                phone: '+7 (423) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Кемеровская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 35 л на одного человека',
+                    'Ограничения на больших АЗС',
+                    'Рекомендуется заправляться с 7:00 до 18:00',
+                    'Ночная заправка может быть ограничена'
+                ],
+                phone: '+7 (384) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Оренбургская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 30 л АИ-95, 100 л Лукойл',
+                    'Запрет налива в канистры на Татрефть и Башнефть',
+                    'Одна центральная АЗС Лукойла закрыта',
+                    'Ограничения со стороны нескольких операторов'
+                ],
+                phone: '+7 (353) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Самарская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 20 л на одного человека',
+                    'На большинстве АЗС ограничения',
+                    'Бензин премиум практически отсутствует',
+                    'Доступен в основном газ'
+                ],
+                phone: '+7 (846) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Волгоградская область': {
+                status: 'critical',
+                restrictions: [
+                    'Лимит: 28 л на одного человека',
+                    'Серьезные проблемы с поставками',
+                    'Многие АЗС имеют ограничения',
+                    'Время работы ограничено: 6:00-21:00'
+                ],
+                phone: '+7 (844) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Башкортостан': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (347) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Пермский край': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (342) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Мурманская область': {
+                status: 'warning',
+                restrictions: [
+                    'Без численного лимита, но запрет налива в канистры',
+                    'Только в личный бак транспортного средства',
+                    'Несколько сетей АЗС работают с ограничениями',
+                    'Ограничения введены с 22 июня'
+                ],
+                phone: '+7 (815) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Карелия': {
+                status: 'warning',
+                restrictions: [
+                    'Ограничений нет',
+                    'Повышенный спрос'
+                ],
+                phone: '+7 (814) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Калининградская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (401) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Псковская область': {
+                status: 'critical',
+                restrictions: [
+                    'Ограничения у Татрефть и Сургутнефтегаз',
+                    '«Сургут» (Псковнефтепродукт) отсутствует бензин марки Аи‑95',
+                    '«Татнефть»: не более 20 л. Аи‑95 и Аи‑92 и не более 40 л. ДТ в одни руки'
+                ],
+                phone: '+7 (811) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Чеченская Республика': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 35 л на одного человека',
+                    'Умеренные ограничения на некоторых АЗС',
+                    'Рекомендуется заправляться днем',
+                    'Вечерние часы могут быть ограничены'
+                ],
+                phone: '+7 (872) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Дагестан': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Незначительные ограничения на поставки',
+                    'Рекомендуется планировать поездки',
+                    'На большинстве АЗС топливо есть'
+                ],
+                phone: '+7 (872) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Ингушетия': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 32 л на одного человека',
+                    'Умеренные ограничения',
+                    'Некоторые АЗС могут быть закрыты',
+                    'Рекомендуется проверять перед поездкой'
+                ],
+                phone: '+7 (873) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Северная Осетия — Алания': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (867) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Кабардино-Балкарская Республика': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (866) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Карачаево-Черкесская Республика': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (869) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Горно-Алтайск': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 35 л на одного человека',
+                    'Умеренные ограничения из-за удаленности',
+                    'Заправляться рекомендуется заранее',
+                    'Некоторые АЗС работают по ограниченному графику'
+                ],
+                phone: '+7 (388) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Нижегородская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 30 л АИ-95 (Татрефть), 30 л (Движение)',
+                    'АИ-92 и дизель свободны с 17 июня',
+                    'Движение: госконтракты без лимитов',
+                    'Ограничения действуют с 22 июня'
+                ],
+                phone: '+7 (831) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Омская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л по постановлению губернатора',
+                    'До 200 л на трассе (автомагистраль)',
+                    'Запрет налива в канистры, только в бак',
+                    'Решение от 22 июня направлено на предотвращение спекуляций'
+                ],
+                phone: '+7 (381) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Саратовская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 30 л на одного человека (по оперативному решению)',
+                    'Действует с 22 по 30 июня',
+                    'Цель: пресечение спекуляций и накопления',
+                    'Только газ доступен без ограничений'
+                ],
+                phone: '+7 (845) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Удмуртия (Ижевск)': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 30 л АИ-95 (АИ-92 свободно с 17 июня)',
+                    'Сеть Татрефть с ограничениями',
+                    'Лимит 30 л на АИ-95 сохраняется по состоянию на 22 июня',
+                    'Ограничения введены с 22 июня'
+                ],
+                phone: '+7 (341) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Удмуртия': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 30 л АИ-95 (АИ-92 свободно с 17 июня)',
+                    'Сеть Татрефть с ограничениями',
+                    'Лимит 30 л на АИ-95 сохраняется по состоянию на 22 июня',
+                    'Ограничения введены с 22 июня'
+                ],
+                phone: '+7 (341) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Тульская область': {
+                status: 'critical',
+                restrictions: [
+                    'Лимит: 30 л АИ-95 (на большинстве АЗС отсутствует)',
+                    'Только дизель доступен на многих АЗС',
+                    'Острый кризис с поставками топлива',
+                    'Перекупцы торгуют топливом по 70-75 руб/л'
+                ],
+                phone: '+7 (487) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Тверская область': {
+                status: 'warning',
+                restrictions: [
+                    'Корпоративные клиенты могут заправляться без ограничений',
+                    'Ограничены продажи бензина для физических лиц на АЗС сетей «Сургутнефтегаз» и «Татнефть»'
+                ],
+                phone: '+7 (482) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Севастополь': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (978) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Чукотский автономный округ': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Удаленный регион с ограниченным доступом',
+                    'Рекомендуется заправляться заранее',
+                    'Некоторые АЗС работают по ограниченному графику'
+                ],
+                phone: '+7 (42952) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Ямало-Ненецкий автономный округ': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (3496) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Ненецкий автономный округ': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (818) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Архангельская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (818) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Калмыкия': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (84722) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Камчатский край': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Удаленный регион',
+                    'Рекомендуется планировать поездки заранее',
+                    'На некоторых АЗС возможны перебои'
+                ],
+                phone: '+7 (4152) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Ханты-Мансийский автономный округ': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (3466) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Липецкая область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (474) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Тамбовская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (475) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Томская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Умеренные ограничения',
+                    'Рекомендуется заправляться днем',
+                    'На большинстве АЗС топливо есть'
+                ],
+                phone: '+7 (3822) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Ульяновская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (842) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Пензенская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (841) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Орловская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (486) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Хакасия': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 35 л на одного человека',
+                    'Умеренные ограничения',
+                    'Рекомендуется заправляться днем',
+                    'На большинстве АЗС топливо есть'
+                ],
+                phone: '+7 (3902) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Мордовия': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (834) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Калужская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (484) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Костромская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (494) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Ярославская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (485) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Владимирская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (492) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Рязанская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (491) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Ивановская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (493) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Нижегородская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 30 л АИ-95 (Татрефть), 30 л (Движение)',
+                    'АИ-92 и дизель свободны с 17 июня',
+                    'Движение: госконтракты без лимитов',
+                    'Ограничения действуют с 22 июня'
+                ],
+                phone: '+7 (831) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Чувашская Республика': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (835) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Вологдская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (817) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Новгородская область': {
+                status: 'normal',
+                restrictions: [
+                    'Официально ограничений нет'
+                ],
+                phone: '+7 (816) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Марий Эл': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (836) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Кировская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (833) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Коми': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (821) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Ставропольский край': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (865) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Адыгея': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (872) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Смоленская область': {
+                status: 'critical',
+                restrictions: [
+                    'Для владельцев легковых автомобилей установлен максимальный объём покупки — 30 литров за одну заправку',
+                    'Для дизельного топлива лимит для легковых машин — 60 литров, для грузового транспорта — до 300 литров',
+                    'Расчет только за наличку',
+                    'Ограничения только Татнефть'
+                ],
+                phone: '+7 (481) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Брянская область': {
+                status: 'warning',
+                restrictions: [
+                    'AlexOil ввели лимит на продажу бензина АИ-92 — не более 20 литров в одни руки',
+                    'На АИ-95 ограничений нет'
+                ],
+                phone: '+7 (483) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Курская область': {
+                status: 'warning',
+                restrictions: [
+                    '«Роснефть» АИ-92 отпускают не более 20 литров одному покупателю, а бензин в канистры больше не наливают'
+                ],
+                phone: '+7 (471) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Белгородская область': {
+                status: 'warning',
+                restrictions: [
+                    '«Роснефть» временно ограничила продажу топлива в канистры',
+                    'Заправка всех видов топлива в баки была доступна в полном объёме'
+                ],
+                phone: '+7 (472) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Воронежская область': {
+                status: 'warning',
+                restrictions: [
+                    'В черте городов области: за один раз в бак отпускается не более 30 литров бензина и до 60 литров дизельного топлива',
+                    'На федеральных и региональных трассах лимит увеличен до 60 литров бензина и до 200 литров дизеля на одну машину'
+                ],
+                phone: '+7 (473) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Бурятия': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Умеренные ограничения на поставки',
+                    'Рекомендуется планировать поездки',
+                    'На большинстве АЗС топливо есть'
+                ],
+                phone: '+7 (3012) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Тыва': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 35 л на одного человека',
+                    'Удаленный регион с ограничениями',
+                    'Заправляться рекомендуется днем',
+                    'На некоторых АЗС возможны перебои'
+                ],
+                phone: '+7 (39422) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Забайкальский край': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Умеренные ограничения',
+                    'Некоторые АЗС работают ограниченно',
+                    'Ситуация стабилизируется'
+                ],
+                phone: '+7 (3022) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Амурская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Умеренные ограничения на поставки',
+                    'Рекомендуется планировать поездки',
+                    'На большинстве АЗС топливо есть'
+                ],
+                phone: '+7 (4162) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Еврейская автономная область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (42161) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Омская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л по постановлению губернатора',
+                    'До 200 л на трассе (автомагистраль)',
+                    'Запрет налива в канистры, только в бак',
+                    'Решение от 22 июня направлено на предотвращение спекуляций'
+                ],
+                phone: '+7 (381) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Челябинская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 45 л на одного человека',
+                    'Незначительные ограничения на поставки',
+                    'Рекомендуется планировать поездки',
+                    'На большинстве АЗС топливо есть'
+                ],
+                phone: '+7 (351) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Саратовская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 30 л на одного человека (по оперативному решению)',
+                    'Действует с 22 по 30 июня',
+                    'Цель: пресечение спекуляций и накопления',
+                    'Только газ доступен без ограничений'
+                ],
+                phone: '+7 (845) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Астраханская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (851) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Республика Крым': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (3652) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Магаданская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Удаленный дальневосточный регион',
+                    'Рекомендуется заправляться заранее',
+                    'Некоторые АЗС работают ограниченно'
+                ],
+                phone: '+7 (4132) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Сахалинская область': {
+                status: 'warning',
+                restrictions: [
+                    'Лимит: 40 л на одного человека',
+                    'Удаленный регион',
+                    'Рекомендуется планировать поездки заранее',
+                    'На некоторых АЗС возможны перебои'
+                ],
+                phone: '+7 (4242) 956-34-58',
+                lastUpdate: '2026-06-23'
+            },
+            'Курганская область': {
+                status: 'normal',
+                restrictions: [
+                    'Ограничений нет'
+                ],
+                phone: '+7 (352) 956-34-58',
+                lastUpdate: '2026-06-23'
+            }
+        };
+
+        const statusColors = {
+            'normal': '#d4edda',
+            'warning': '#fef3cd',
+            'critical': '#fee'
+        };
+
+        // Маппинг имён регионов из GeoJSON на наши имена
+        const regionNameMap = {
+            'Moscow Oblast': 'Московская область',
+            'Moskovskaya Oblast': 'Московская область',
+            'Moscow': 'Московская область',
+            'Moskva': 'Московская область',
+            'Saint Petersburg': 'Санкт-Петербург',
+            'Sankt-Peterburg': 'Санкт-Петербург',
+            'St. Petersburg': 'Санкт-Петербург',
+            'City of St. Petersburg': 'Санкт-Петербург',
+            'Leningrad Oblast': 'Ленинградская область',
+            'Leningradskaya Oblast': 'Ленинградская область',
+            'Leningrad': 'Ленинградская область',
+            'Rostov Oblast': 'Ростовская область',
+            'Rostovskaya Oblast': 'Ростовская область',
+            'Rostov': 'Ростовская область',
+            'Krasnodar Krai': 'Краснодарский край',
+            'Krasnodarskiy Krai': 'Краснодарский край',
+            'Krasnodar': 'Краснодарский край',
+            'Tatarstan': 'Республика Татарстан',
+            'Republic of Tatarstan': 'Республика Татарстан',
+            'Tatar': 'Республика Татарстан',
+            'Sverdlovsk Oblast': 'Свердловская область',
+            'Sverdlovskaya Oblast': 'Свердловская область',
+            'Sverdlovsk': 'Свердловская область',
+            'Tyumen Oblast': 'Тюменская область',
+            'Tyumenskaya Oblast': 'Тюменская область',
+            'Tyumen': 'Тюменская область',
+            'Novosibirsk Oblast': 'Новосибирская область',
+            'Novosibirskaya Oblast': 'Новосибирская область',
+            'Novosibirsk': 'Новосибирская область',
+            'Krasnoyarsk Krai': 'Красноярский край',
+            'Krasnoyarskiy Krai': 'Красноярский край',
+            'Krasnoyarsk': 'Красноярский край',
+            'Irkutsk Oblast': 'Иркутская область',
+            'Irkutskaya Oblast': 'Иркутская область',
+            'Irkutsk': 'Иркутская область',
+            'Sakha': 'Республика Саха (Якутия)',
+            'Sakha (Yakutiya)': 'Республика Саха (Якутия)',
+            'Sakha (Yakutia)': 'Республика Саха (Якутия)',
+            'Sakha Republic': 'Республика Саха (Якутия)',
+            'Yakutia': 'Республика Саха (Якутия)',
+            'Khabarovsk Krai': 'Хабаровский край',
+            'Khabrovsk Krai': 'Хабаровский край',
+            'Khabarovskiy Krai': 'Хабаровский край',
+            'Khabarovsk': 'Хабаровский край',
+            'Primorsky Krai': 'Приморский край',
+            'Primorskiy Krai': 'Приморский край',
+            'Primorsky': 'Приморский край',
+            'Kemerovo Oblast': 'Кемеровская область',
+            'Kemerovskaya Oblast': 'Кемеровская область',
+            'Kemerovo': 'Кемеровская область',
+            'Orenburg Oblast': 'Оренбургская область',
+            'Orenburgskaya Oblast': 'Оренбургская область',
+            'Orenburg': 'Оренбургская область',
+            'Samara Oblast': 'Самарская область',
+            'Samarskaya Oblast': 'Самарская область',
+            'Samara': 'Самарская область',
+            'Volgograd Oblast': 'Волгоградская область',
+            'Volgogradskaya Oblast': 'Волгоградская область',
+            'Volgograd': 'Волгоградская область',
+            'Bashkortostan': 'Республика Башкортостан',
+            'Republic of Bashkortostan': 'Республика Башкортостан',
+            'Bashkir': 'Республика Башкортостан',
+            'Perm Krai': 'Пермский край',
+            'Permskiy Krai': 'Пермский край',
+            'Perm': 'Пермский край',
+            'Perm\'': 'Пермский край',
+            'Murmansk': 'Мурманская область',
+            'Murmansk Oblast': 'Мурманская область',
+            'Karelia': 'Республика Карелия',
+            'Republic of Karelia': 'Республика Карелия',
+            'Kaliningrad': 'Калининградская область',
+            'Kaliningrad Oblast': 'Калининградская область',
+            'Pskov': 'Псковская область',
+            'Pskov Oblast': 'Псковская область',
+            'Chechnya': 'Чеченская Республика',
+            'Chechen': 'Чеченская Республика',
+            'Dagestan': 'Республика Дагестан',
+            'Ingush': 'Республика Ингушетия',
+            'Ingushetia': 'Республика Ингушетия',
+            'North Ossetia': 'Республика Северная Осетия — Алания',
+            'Ossetia': 'Республика Северная Осетия — Алания',
+            'Kabardin-Balkar': 'Кабардино-Балкарская Республика',
+            'Karachay-Cherkess': 'Карачаево-Черкесская Республика',
+            'Gorno-Altay': 'Горно-Алтайск',
+            'Altay': 'Горно-Алтайск',
+            'Sevastopol': 'Севастополь',
+            'Chukchi Autonomous Okrug': 'Чукотский автономный округ',
+            'Yamal-Nenets': 'Ямало-Ненецкий автономный округ',
+            'Nenets': 'Ненецкий автономный округ',
+            'Arkhangel\'sk': 'Архангельская область',
+            'Arkhangelsk': 'Архангельская область',
+            'Kalmyk': 'Республика Калмыкия',
+            'Kamchatka': 'Камчатский край',
+            'Khanty-Mansiy': 'Ханты-Мансийский автономный округ',
+            'Lipetsk': 'Липецкая область',
+            'Tambov': 'Тамбовская область',
+            'Tomsk': 'Томская область',
+            'Ul\'yanovsk': 'Ульяновская область',
+            'Ulyanovsk': 'Ульяновская область',
+            'Penza': 'Пензенская область',
+            'Orel': 'Орловская область',
+            'Orlov': 'Орловская область',
+            'Khakass': 'Республика Хакасия',
+            'Mordovia': 'Республика Мордовия',
+            'Kaluga': 'Калужская область',
+            'Kostroma': 'Костромская область',
+            'Yaroslavl\'': 'Ярославская область',
+            'Yaroslavl': 'Ярославская область',
+            'Vladimir': 'Владимирская область',
+            'Ryazan\'': 'Рязанская область',
+            'Ryazan': 'Рязанская область',
+            'Ivanovo': 'Ивановская область',
+            'Nizhegorod': 'Нижегородская область',
+            'Nizhny Novgorod': 'Нижегородская область',
+            'Tula': 'Тульская область',
+            'Chuvash': 'Чувашская Республика',
+            'Vologda': 'Вологдская область',
+            'Novgorod': 'Новгородская область',
+            'Tver\'': 'Тверская область',
+            'Tver': 'Тверская область',
+            'Mariy-El': 'Республика Марий Эл',
+            'Mari El': 'Республика Марий Эл',
+            'Kirov': 'Кировская область',
+            'Udmurt': 'Удмуртия',
+            'Udmurtia': 'Удмуртия',
+            'Komi': 'Республика Коми',
+            'Stavropol\'': 'Ставропольский край',
+            'Stavropol': 'Ставропольский край',
+            'Adygey': 'Республика Адыгея',
+            'Adygea': 'Республика Адыгея',
+            'Smolensk': 'Смоленская область',
+            'Bryansk': 'Брянская область',
+            'Kursk': 'Курская область',
+            'Belgorod': 'Белгородская область',
+            'Voronezh': 'Воронежская область',
+            'Buryat': 'Республика Бурятия',
+            'Buryatia': 'Республика Бурятия',
+            'Tuva': 'Республика Тыва',
+            'Chita': 'Забайкальский край',
+            'Zabaikalskiy': 'Забайкальский край',
+            'Amur': 'Амурская область',
+            'Yevrey': 'Еврейская автономная область',
+            'Jewish Autonomous': 'Еврейская автономная область',
+            'Primor\'ye': 'Приморский край',
+            'Tyumen\'': 'Тюменская область',
+            'Kurgan': 'Курганская область',
+            'Omsk': 'Омская область',
+            'Chelyabinsk': 'Челябинская область',
+            'Saratov': 'Саратовская область',
+            'Astrakhan\'': 'Астраханская область',
+            'Astrakhan': 'Астраханская область',
+            'Crimea': 'Республика Крым',
+            'Maga Buryatdan': 'Магаданская область',
+            'Magadan': 'Магаданская область',
+            'Sakhalin': 'Сахалинская область'
+        };
+
+        function getRegionData(geoJsonName) {
+            if (!geoJsonName) return null;
+            
+            // Сначала пробуем прямое совпадение
+            if (regionsData[geoJsonName]) {
+                console.log('✓ Прямое совпадение:', geoJsonName);
+                return geoJsonName;
+            }
+            // Затем пробуем через маппинг
+            if (regionNameMap[geoJsonName]) {
+                console.log('✓ Найдено через маппинг:', geoJsonName, '->', regionNameMap[geoJsonName]);
+                return regionNameMap[geoJsonName];
+            }
+            
+            // Пробуем нормализованный поиск (игнорируем регистр и пробелы)
+            const normalized = geoJsonName.trim().toLowerCase();
+            for (const [key, value] of Object.entries(regionNameMap)) {
+                if (key.toLowerCase() === normalized) {
+                    console.log('✓ Найдено через нормализацию:', geoJsonName, '->', value);
+                    return value;
+                }
+            }
+            
+            // Пробуем частичное совпадение (если одна из частей совпадает)
+            const parts = normalized.split(/\s+/);
+            for (const part of parts) {
+                if (part.length > 3) {
+                    for (const [key, value] of Object.entries(regionNameMap)) {
+                        if (key.toLowerCase().includes(part)) {
+                            console.log('✓ Найдено через частичное совпадение:', geoJsonName, '(по слову "' + part + '") ->', value);
+                            return value;
+                        }
+                    }
+                }
+            }
+            
+            // Если ничего не найдено, логируем для отладки
+            console.log('❌ Регион НЕ найден:', geoJsonName);
+            return null;
+        }
+
+        const infoPanel = document.getElementById('regionInfo');
+
+        // Загружаем Natural Earth GeoJSON с нормальными границами регионов
+        console.log('Загружаем Natural Earth GeoJSON...');
+        fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson')
+            .then(response => response.json())
+            .then(geojson => {
+                const russiaRegions = geojson.features.filter(f => f.properties.admin === 'Russia');
+                console.log('✓ Natural Earth GeoJSON загружена, регионов России:', russiaRegions.length);
+
+                L.geoJSON(russiaRegions, {
+                    style: function(feature) {
+                        const geoJsonName = feature.properties.name;
+                        const mappedName = getRegionData(geoJsonName);
+                        const data = mappedName ? regionsData[mappedName] : null;
+                        const color = data ? statusColors[data.status] : '#e0e0e0';
+
+                        return {
+                            fillColor: color,
+                            weight: 2,
+                            opacity: 1,
+                            color: '#333',
+                            fillOpacity: 0.7
+                        };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        const geoJsonName = feature.properties.name;
+                        const mappedName = getRegionData(geoJsonName);
+                        const data = mappedName ? regionsData[mappedName] : null;
+
+                        if (data && mappedName) {
+                            layer.bindPopup(`<div class="popup-content">
+                                <strong>${mappedName}</strong>
+                                <br>Статус: ${data.status === 'normal' ? 'Ограничений нет' : 
+                                             data.status === 'warning' ? 'Умеренные ограничения' : 
+                                             'Серьезные ограничения'}
+                            </div>`);
+                            
+                            layer.on('click', function() {
+                                showRegionInfo(mappedName, data);
+                            });
+
+                            layer.on('mouseover', function() {
+                                layer.setStyle({ weight: 3, fillOpacity: 0.9 });
+                                layer.bringToFront();
+                            });
+
+                            layer.on('mouseout', function() {
+                                layer.setStyle({ weight: 2, fillOpacity: 0.7 });
+                            });
+                        }
+                    }
+                }).addTo(map);
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки GeoJSON:', error);
+            });
+
+        // Клик на карту вне региона - скрыть информацию
+        map.on('click', function(e) {
+            // Проверяем, был ли клик на объект
+            if (e.target.feature === undefined) {
+                infoPanel.innerHTML = `
+                    <h2>📍 Информация по региону</h2>
+                    <div class="info-empty">
+                        <p>Нажмите на регион на карте для просмотра информации</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

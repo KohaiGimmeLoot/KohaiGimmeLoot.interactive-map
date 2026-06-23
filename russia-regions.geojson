@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "properties": {"name": "Moscow Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[34.95, 57.5], [40.85, 57.5], [40.85, 53.65], [34.95, 53.65], [34.95, 57.5]]]}},
+    {"type": "Feature", "properties": {"name": "Saint Petersburg"}, "geometry": {"type": "Polygon", "coordinates": [[[29.2, 60.4], [31.3, 60.4], [31.3, 58.9], [29.2, 58.9], [29.2, 60.4]]]}},
+    {"type": "Feature", "properties": {"name": "Leningrad Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[27.5, 61.5], [37.5, 61.5], [37.5, 58.5], [27.5, 58.5], [27.5, 61.5]]]}},
+    {"type": "Feature", "properties": {"name": "Rostov Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[35.5, 48.8], [41.5, 48.8], [41.5, 45.5], [35.5, 45.5], [35.5, 48.8]]]}},
+    {"type": "Feature", "properties": {"name": "Krasnodar Krai"}, "geometry": {"type": "Polygon", "coordinates": [[[36.5, 46.8], [42.5, 46.8], [42.5, 42.8], [36.5, 42.8], [36.5, 46.8]]]}},
+    {"type": "Feature", "properties": {"name": "Tatarstan"}, "geometry": {"type": "Polygon", "coordinates": [[[48, 56.5], [56.5, 56.5], [56.5, 51.5], [48, 51.5], [48, 56.5]]]}},
+    {"type": "Feature", "properties": {"name": "Sverdlovsk Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[55.5, 62.5], [67, 62.5], [67, 57.5], [55.5, 57.5], [55.5, 62.5]]]}},
+    {"type": "Feature", "properties": {"name": "Tyumen Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[59.5, 68], [77, 68], [77, 60], [59.5, 60], [59.5, 68]]]}},
+    {"type": "Feature", "properties": {"name": "Novosibirsk Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[75, 60.5], [89, 60.5], [89, 52.5], [75, 52.5], [75, 60.5]]]}},
+    {"type": "Feature", "properties": {"name": "Krasnoyarsk Krai"}, "geometry": {"type": "Polygon", "coordinates": [[[86, 69], [108, 69], [108, 60], [86, 60], [86, 69]]]}},
+    {"type": "Feature", "properties": {"name": "Irkutsk Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[103, 60], [120, 60], [120, 50], [103, 50], [103, 60]]]}},
+    {"type": "Feature", "properties": {"name": "Sakha"}, "geometry": {"type": "Polygon", "coordinates": [[[109, 76], [162, 76], [162, 53], [109, 53], [109, 76]]]}},
+    {"type": "Feature", "properties": {"name": "Khabarovsk Krai"}, "geometry": {"type": "Polygon", "coordinates": [[[129, 60.5], [158, 60.5], [158, 42.5], [129, 42.5], [129, 60.5]]]}},
+    {"type": "Feature", "properties": {"name": "Primorsky Krai"}, "geometry": {"type": "Polygon", "coordinates": [[[130.5, 48], [137.5, 48], [137.5, 41.5], [130.5, 41.5], [130.5, 48]]]}},
+    {"type": "Feature", "properties": {"name": "Kemerovo Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[84.5, 57], [98.5, 57], [98.5, 51.5], [84.5, 51.5], [84.5, 57]]]}},
+    {"type": "Feature", "properties": {"name": "Orenburg Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[50, 54.5], [60.5, 54.5], [60.5, 50], [50, 50], [50, 54.5]]]}},
+    {"type": "Feature", "properties": {"name": "Samara Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[47.5, 54.5], [54.5, 54.5], [54.5, 50.5], [47.5, 50.5], [47.5, 54.5]]]}},
+    {"type": "Feature", "properties": {"name": "Volgograd Oblast"}, "geometry": {"type": "Polygon", "coordinates": [[[41.5, 51], [48.5, 51], [48.5, 46.5], [41.5, 46.5], [41.5, 51]]]}},
+    {"type": "Feature", "properties": {"name": "Bashkortostan"}, "geometry": {"type": "Polygon", "coordinates": [[[52, 56.5], [60.5, 56.5], [60.5, 50.5], [52, 50.5], [52, 56.5]]]}},
+    {"type": "Feature", "properties": {"name": "Perm Krai"}, "geometry": {"type": "Polygon", "coordinates": [[[51.5, 63.5], [66.5, 63.5], [66.5, 56.5], [51.5, 56.5], [51.5, 63.5]]]}}
+  ]
+}
